@@ -62,10 +62,10 @@ import Pagination from '@/components/Pagination.vue'
 import AdSlot from '@/components/AdSlot.vue'
 
 useSeo({
-  title: '首页 - FullStack News',
-  description: 'FullStack News — 聚焦 AI 工具、短剧资讯的科技新闻平台，每日更新最新行业动态',
+  title: '首页 - AI Hub',
+  description: 'AI Hub — 聚焦 AI 工具、短剧资讯的科技新闻平台，每日更新最新行业动态',
   keywords: 'AI,人工智能,科技新闻,AI工具,短剧',
-  ogTitle: 'FullStack News',
+  ogTitle: 'AI Hub',
   ogDescription: '聚焦 AI 工具、短剧资讯的科技新闻平台',
   ogType: 'website',
 })

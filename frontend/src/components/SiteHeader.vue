@@ -4,7 +4,7 @@
       <!-- Logo区域 -->
       <router-link to="/" class="logo">
         <span class="logo-icon">🤖</span>
-        <span class="logo-text">FullStack News</span>
+        <span class="logo-text">AI Hub</span>
       </router-link>
 
       <!-- 桌面端分类导航 -->

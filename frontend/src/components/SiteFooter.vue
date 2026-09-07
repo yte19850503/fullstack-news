@@ -9,7 +9,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 FullStack News. All rights reserved.</p>
+        <p>&copy; 2026 AI Hub. All rights reserved.</p>
       </div>
     </div>
   </footer>
