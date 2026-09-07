@@ -1,0 +1,36 @@
+.git
+.gitee
+.github
+.vscode
+.idea
+*.md
+!backend-py/requirements.txt
+
+# Python
+__pycache__
+*.pyc
+.venv
+backend-py/.env
+backend-py/tests
+backend-py/nginx/ssl
+
+# Node
+node_modules
+frontend/node_modules
+admin/node_modules
+frontend/dist
+admin/dist
+
+# Docker
+backend-py/docker-compose.yml
+backend-py/Dockerfile
+
+# Tests & CI
+.pytest_cache
+htmlcov
+.coverage
+tests/e2e
+
+# OS
+.DS_Store
+Thumbs.db

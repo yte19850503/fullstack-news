@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import auth, article, category, comment, tag, admin, ad, seo
 from app.services.rate_limiter import rate_limiter
@@ -33,12 +36,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5178",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5178",
-]
+_cors_env = os.getenv("CORS_ORIGINS", "")
+ALLOWED_ORIGINS = (
+    [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if _cors_env
+    else [
+        "http://localhost:5173",
+        "http://localhost:5178",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5178",
+    ]
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,3 +78,14 @@ app.include_router(seo.router)
 @app.get("/api/health", summary="健康检查")
 def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
+# ---------- 生产环境：托管前端静态文件 ----------
+_frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
+_admin_dist = os.path.join(os.path.dirname(__file__), "..", "..", "admin", "dist")
+
+if os.path.isdir(_admin_dist):
+    app.mount("/admin", StaticFiles(directory=_admin_dist, html=True), name="admin-static")
+
+if os.path.isdir(_frontend_dist):
+    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend-static")
