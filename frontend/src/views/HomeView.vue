@@ -1,16 +1,22 @@
 <template>
   <div class="home">
     <div class="home-main">
-      <div class="article-list">
-        <div v-if="loading" class="loading">加载中...</div>
+      <!-- 文章列表 - 响应式网格 -->
+      <div class="article-grid">
+        <div v-if="loading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>加载中...</p>
+        </div>
         <template v-else>
           <template v-for="(article, index) in articles" :key="article.id">
-            <ArticleCard :article="article" />
-            <AdSlot v-if="(index + 1) % 5 === 0" position="infeed" />
+            <ArticleCard :article="article" class="grid-item" />
+            <AdSlot v-if="(index + 1) % 5 === 0" position="infeed" class="ad-infeed" />
           </template>
-          <p v-if="!articles.length" class="empty">暂无文章</p>
+          <p v-if="!articles.length" class="empty-state">暂无文章</p>
         </template>
       </div>
+      
+      <!-- 分页 -->
       <Pagination
         v-if="total > 0"
         :current="page"
@@ -20,10 +26,16 @@
       />
     </div>
 
+    <!-- 侧边栏 -->
     <aside class="home-sidebar">
       <AdSlot position="sidebar" />
       <div class="sidebar-section">
-        <h3 class="sidebar-title">热门标签</h3>
+        <h3 class="sidebar-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+          </svg>
+          热门标签
+        </h3>
         <div class="tag-cloud">
           <router-link
             v-for="tag in tags"
@@ -50,10 +62,10 @@ import Pagination from '@/components/Pagination.vue'
 import AdSlot from '@/components/AdSlot.vue'
 
 useSeo({
-  title: '首页 - AI 资讯站',
-  description: 'AI 资讯站 — 聚焦 AI 工具、短剧资讯的科技新闻平台，每日更新最新行业动态',
+  title: '首页 - FullStack News',
+  description: 'FullStack News — 聚焦 AI 工具、短剧资讯的科技新闻平台，每日更新最新行业动态',
   keywords: 'AI,人工智能,科技新闻,AI工具,短剧',
-  ogTitle: 'AI 资讯站',
+  ogTitle: 'FullStack News',
   ogDescription: '聚焦 AI 工具、短剧资讯的科技新闻平台',
   ogType: 'website',
 })
@@ -122,76 +134,177 @@ const tags = appStore.tags
 
 <style scoped>
 .home {
-  display: flex;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: 1fr var(--sidebar-width);
+  gap: var(--space-8);
+  align-items: start;
 }
 
 .home-main {
-  flex: 1;
   min-width: 0;
 }
 
-.article-list {
+/* 响应式文章网格 */
+.article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.ad-infeed {
+  grid-column: 1 / -1;
+}
+
+/* 加载状态 */
+.loading-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-12) 0;
+  color: var(--color-text-muted);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto var(--space-4);
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  font-size: var(--text-sm);
+}
+
+/* 空状态 */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-12) 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+}
+
+/* 侧边栏 */
+.home-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 40px 0;
-  color: var(--color-text-muted);
-  font-size: 15px;
-}
-
-.home-sidebar {
-  width: var(--sidebar-width);
-  flex-shrink: 0;
+  gap: var(--space-6);
 }
 
 .sidebar-section {
-  background: var(--color-bg-white);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-top: 16px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
   box-shadow: var(--shadow);
+  transition: box-shadow var(--transition);
+}
+
+.sidebar-section:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .sidebar-title {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-4);
   color: var(--color-text);
+}
+
+.title-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
 }
 
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .tag-link {
-  padding: 4px 12px;
-  background: #f0f0f0;
-  border-radius: 14px;
-  font-size: 13px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
 }
 
-.tag-link:hover,
+.tag-link:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--color-primary);
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+}
+
 .tag-link.active {
-  background: var(--color-primary);
-  color: #fff;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-sm);
 }
 
+/* 平板端响应式 */
+@media (max-width: 1024px) {
+  .home {
+    grid-template-columns: 1fr 280px;
+    gap: var(--space-6);
+  }
+  
+  .article-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-5);
+  }
+}
+
+/* 移动端响应式 - 单列布局 */
 @media (max-width: 768px) {
   .home {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
   }
+  
+  .article-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+  
   .home-sidebar {
-    width: 100%;
+    position: static;
+    order: 2;
+  }
+  
+  .sidebar-section {
+    padding: var(--space-5);
+  }
+}
+
+/* 小屏幕手机优化 */
+@media (max-width: 480px) {
+  :root {
+    --space-6: 16px;
+  }
+  
+  .article-grid {
+    gap: var(--space-4);
+  }
+  
+  .loading-state,
+  .empty-state {
+    padding: var(--space-8) 0;
   }
 }
 </style>
