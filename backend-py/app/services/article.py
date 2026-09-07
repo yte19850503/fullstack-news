@@ -166,17 +166,23 @@ class ArticleService:
         term = term.strip().lower()[:100]
         if not term:
             return
-        redis_client.zincrby(HOT_TERMS_KEY, 1, term)
+        try:
+            redis_client.zincrby(HOT_TERMS_KEY, 1, term)
+        except Exception:
+            pass
 
     def get_hot_search_terms(self, top: int = 10) -> list[dict]:
         cached = cache_service.get("search:hot_terms_result")
         if cached:
             return cached
 
-        results = redis_client.zrevrange(HOT_TERMS_KEY, 0, top - 1, withscores=True)
-        terms = [
-            {"term": term.decode() if isinstance(term, bytes) else term, "count": int(score)} for term, score in results
-        ]
+        try:
+            results = redis_client.zrevrange(HOT_TERMS_KEY, 0, top - 1, withscores=True)
+            terms = [
+                {"term": term.decode() if isinstance(term, bytes) else term, "count": int(score)} for term, score in results
+            ]
+        except Exception:
+            terms = []
         cache_service.set("search:hot_terms_result", terms, ttl=60)
         return terms
 
