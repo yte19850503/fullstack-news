@@ -6,10 +6,13 @@
     </div>
 
     <div class="article-list">
-      <div v-if="loading" class="loading">搜索中...</div>
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>搜索中...</p>
+      </div>
       <template v-else>
         <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
-        <p v-if="!articles.length" class="empty">未找到相关文章</p>
+        <p v-if="!articles.length" class="empty-state">未找到相关文章</p>
       </template>
     </div>
 
@@ -80,37 +83,108 @@ watch(
 
 <style scoped>
 .search-page {
-  max-width: 800px;
+  max-width: var(--content-max-width);
   margin: 0 auto;
 }
 
 .search-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
 .search-header h2 {
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .result-count {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
 .article-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
-.loading,
-.empty {
+.loading-state,
+.empty-state {
+  grid-column: 1 / -1;
   text-align: center;
-  padding: 40px 0;
+  padding: var(--space-12) 0;
   color: var(--color-text-muted);
+  font-size: var(--text-base);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto var(--space-4);
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 平板端响应式 */
+@media (max-width: 1024px) {
+  .article-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-5);
+  }
+}
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+  .search-page {
+    padding: 0 var(--space-4);
+  }
+  
+  .search-header {
+    padding: var(--space-5);
+  }
+  
+  .search-header h2 {
+    font-size: var(--text-lg);
+  }
+  
+  .article-list {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+}
+
+/* 小屏幕手机优化 */
+@media (max-width: 480px) {
+  .search-page {
+    padding: 0 var(--space-3);
+  }
+  
+  .search-header {
+    padding: var(--space-4);
+  }
+  
+  .search-header h2 {
+    font-size: var(--text-base);
+  }
+  
+  .loading-state,
+  .empty-state {
+    padding: var(--space-8) 0;
+    font-size: var(--text-sm);
+  }
 }
 </style>

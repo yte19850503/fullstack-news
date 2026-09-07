@@ -5,18 +5,14 @@
 # --- 阶段 1：构建前端 ---
 FROM node:20-alpine AS frontend-builder
 WORKDIR /build/frontend
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
 COPY frontend/ .
-RUN npm run build
+RUN npm install && npm run build
 
 # --- 阶段 2：构建管理后台 ---
 FROM node:20-alpine AS admin-builder
 WORKDIR /build/admin
-COPY admin/package.json admin/package-lock.json* ./
-RUN npm install
 COPY admin/ .
-RUN npm run build
+RUN npm install && npm run build
 
 # --- 阶段 3：安装 Python 依赖 ---
 FROM python:3.11-slim AS builder
