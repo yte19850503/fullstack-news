@@ -8,11 +8,35 @@ VIEW_KEY_PREFIX = "views:pending"
 
 
 class ViewCounterService:
+    def __init__(self):
+        self._redis_ok = None
+
+    def _check_redis(self) -> bool:
+        if self._redis_ok is None:
+            try:
+                redis_client.ping()
+                self._redis_ok = True
+            except Exception:
+                self._redis_ok = False
+                print("[ViewCounter] Redis unavailable, falling back to direct DB writes")
+        return self._redis_ok
+
     def increment(self, article_id: int) -> None:
+        if self._check_redis():
+            try:
+                redis_client.hincrby(VIEW_KEY_PREFIX, str(article_id), 1)
+                return
+            except Exception:
+                self._redis_ok = False
         try:
-            redis_client.hincrby(VIEW_KEY_PREFIX, str(article_id), 1)
-        except Exception:
-            pass
+            with engine.connect() as conn:
+                conn.execute(
+                    text("UPDATE articles SET view_count = view_count + 1 WHERE id = :id"),
+                    {"id": article_id},
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"[ViewCounter] Direct DB increment failed for article {article_id}: {e}")
 
     def sync_to_database(self) -> None:
         try:
@@ -30,8 +54,9 @@ class ViewCounterService:
                 conn.commit()
 
             redis_client.delete(VIEW_KEY_PREFIX)
+            print(f"[ViewCounter] Synced {len(pending)} article(s) to DB")
         except Exception as e:
-            print(f"View sync error: {e}")
+            print(f"[ViewCounter] Sync error: {e}")
 
     def start_auto_sync(self, interval_ms: int = 60000) -> None:
         def _loop():

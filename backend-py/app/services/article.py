@@ -191,6 +191,7 @@ class ArticleService:
         cached = cache_service.get(cache_key)
         if cached:
             view_counter.increment(cached["id"])
+            cached["view_count"] = cached.get("view_count", 0) + 1
             return cached
 
         article = (
@@ -208,6 +209,7 @@ class ArticleService:
 
         view_counter.increment(article.id)
         result = self._to_detail(article)
+        result["view_count"] = result.get("view_count", 0) + 1
         cache_service.set(cache_key, result, ttl=600)
         return result
 
