@@ -88,4 +88,11 @@ if os.path.isdir(_admin_dist):
     app.mount("/admin", StaticFiles(directory=_admin_dist, html=True), name="admin-static")
 
 if os.path.isdir(_frontend_dist):
-    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend-static")
+    from fastapi.responses import FileResponse
+
+    @app.get("/{full_path:path}")
+    def _serve_spa(full_path: str):
+        file_path = os.path.join(_frontend_dist, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(_frontend_dist, "index.html"))
