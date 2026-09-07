@@ -28,5 +28,9 @@ done
 echo "Running database migrations..."
 alembic upgrade head
 
+echo "Checking static dist directories..."
+ls -la /app/admin/dist/ 2>&1 || echo "WARNING: /app/admin/dist not found"
+ls -la /app/frontend/dist/ 2>&1 || echo "WARNING: /app/frontend/dist not found"
+
 echo "Starting FastAPI server..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

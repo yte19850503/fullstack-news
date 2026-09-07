@@ -81,17 +81,29 @@ def health():
 
 
 # ---------- 生产环境：托管前端静态文件 ----------
-_frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
-_admin_dist = os.path.join(os.path.dirname(__file__), "..", "..", "admin", "dist")
+_base_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_frontend_dist = os.path.normpath(os.path.join(_base_dir, "frontend", "dist"))
+_admin_dist = os.path.normpath(os.path.join(_base_dir, "admin", "dist"))
+
+print(f"[static] _admin_dist={_admin_dist} exists={os.path.isdir(_admin_dist)}")
+print(f"[static] _frontend_dist={_frontend_dist} exists={os.path.isdir(_frontend_dist)}")
 
 if os.path.isdir(_admin_dist):
     app.mount("/admin", StaticFiles(directory=_admin_dist, html=True), name="admin-static")
+else:
+    print(f"[static] WARNING: admin dist not found at {_admin_dist}, /admin will not be served")
 
 if os.path.isdir(_frontend_dist):
     from fastapi.responses import FileResponse
 
     @app.get("/{full_path:path}")
     def _serve_spa(full_path: str):
+        if full_path.startswith("admin"):
+            admin_file = os.path.join(_admin_dist, full_path[len("admin"):].lstrip("/"))
+            if os.path.isfile(admin_file):
+                return FileResponse(admin_file)
+            if os.path.isdir(_admin_dist):
+                return FileResponse(os.path.join(_admin_dist, "index.html"))
         file_path = os.path.join(_frontend_dist, full_path)
         if full_path and os.path.isfile(file_path):
             return FileResponse(file_path)
