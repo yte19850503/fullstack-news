@@ -1,16 +1,18 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
-
 import os
+import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from app.api.routes import auth, article, category, comment, tag, admin, ad, seo
 from app.services.rate_limiter import rate_limiter
 from app.services.view_counter import view_counter
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.core.exceptions import AppError
 
 
 @asynccontextmanager
@@ -63,6 +65,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 async def rate_limit_middleware(request: Request, call_next):
     rate_limiter(request)
     return await call_next(request)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, AppError):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    traceback.print_exc()
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 app.include_router(auth.router, prefix="/api")

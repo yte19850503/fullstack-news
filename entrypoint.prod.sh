@@ -28,6 +28,15 @@ done
 echo "Running database migrations..."
 alembic upgrade head
 
+echo "Listing database tables..."
+python -c "
+from sqlalchemy import create_engine, inspect
+engine = create_engine('$DATABASE_URL')
+insp = inspect(engine)
+tables = insp.get_table_names()
+print('Tables:', tables)
+"
+
 echo "Seeding default admin user..."
 python -c "
 from app.database import SessionLocal, engine
