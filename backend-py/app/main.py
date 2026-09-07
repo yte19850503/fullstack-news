@@ -77,7 +77,19 @@ app.include_router(seo.router)
 
 @app.get("/api/health", summary="健康检查")
 def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    db_ok = False
+    try:
+        from app.database import engine
+        with engine.connect() as conn:
+            conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db_ok = True
+    except Exception as e:
+        db_ok = False
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "database": "connected" if db_ok else "unreachable",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 # ---------- 生产环境：托管前端静态文件 ----------
