@@ -1,0 +1,23 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # 行长度由 formatter 控制，不重复检查
+]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest.py: 必须先 patch Redis 再导入 app 模块，所以 E402 是必须的
+"conftest.py" = ["E402", "F401"]
+# alembic/env.py: 需要先配置 config 再导入 Base/models
+"alembic/env.py" = ["E402"]
+# alembic 迁移文件: 自动生成的，不手动修改
+"alembic/versions/*.py" = ["F401", "E402", "W291"]
+# models 使用字符串前向引用（SQLAlchemy 标准模式）
+"app/models/*.py" = ["F821"]
+# 临时测试脚本，不参与 CI
+"test_*.py" = ["E401", "E402", "F401", "F541"]
+# admin 服务中 == True 是 SQLAlchemy 查询语法
+"app/services/admin.py" = ["E712"]

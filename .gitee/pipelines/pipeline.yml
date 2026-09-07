@@ -1,0 +1,193 @@
+# ============================================================
+# Gitee Go CI/CD Pipeline - AI 资讯站
+# ============================================================
+# 流程：push → lint → test → build → deploy
+#
+# 使用前准备：
+# 1. 在 Gitee 仓库 → 设置 → 流水线 中启用 Gitee Go
+# 2. 配置环境变量（仓库 → 设置 → 环境变量）：
+#    - RAILWAY_TOKEN: Railway 部署 Token
+#    - DOCKER_USERNAME: Docker Hub 用户名（可选）
+#    - DOCKER_PASSWORD: Docker Hub 密码（可选）
+# ============================================================
+
+triggers:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+stages:
+  # ========================================================
+  # Stage 1：代码检查（Ruff）
+  # ========================================================
+  lint:
+    name: 代码检查
+    jobs:
+      ruff-lint:
+        name: Ruff Lint
+        runs-on: linux-x86_1
+        steps:
+          - name: 检出代码
+            plugin: checkout
+            inputs:
+              fetch-depth: 1
+
+          - name: 安装 Python
+            plugin: python
+            inputs:
+              version: "3.11"
+
+          - name: 安装 Ruff
+            script:
+              - pip install ruff==0.8.0
+
+          - name: Ruff 代码检查
+            script:
+              - ruff check backend-py/
+
+          - name: Ruff 格式化检查
+            script:
+              - ruff format --check backend-py/
+
+  # ========================================================
+  # Stage 2：运行测试（pytest）
+  # ========================================================
+  test:
+    name: 运行测试
+    jobs:
+      pytest:
+        name: Pytest
+        runs-on: linux-x86_1
+        needs: ruff-lint
+        steps:
+          - name: 检出代码
+            plugin: checkout
+            inputs:
+              fetch-depth: 1
+
+          - name: 安装 Python
+            plugin: python
+            inputs:
+              version: "3.11"
+
+          - name: 安装依赖
+            script:
+              - pip install -r backend-py/requirements-dev.txt
+
+          - name: 运行测试
+            script:
+              - cd backend-py
+              - python -m pytest tests/ -v --tb=short
+
+          - name: 覆盖率报告
+            script:
+              - cd backend-py
+              - python -m pytest tests/ --cov=app --cov-report=term-missing --tb=short
+            continue-on-error: true
+
+  # ========================================================
+  # Stage 3：构建 Docker 镜像（仅 push 到 main 时执行）
+  # ========================================================
+  # 注意：Gitee Go 免费版可能不支持 Docker 构建
+  # 如果受限，可以跳过此阶段，让 Railway 直接构建
+  build:
+    name: 构建镜像
+    jobs:
+      docker-build:
+        name: Docker Build
+        runs-on: linux-x86_1
+        needs: pytest
+        # 只在 push 到主分支时构建
+        if: 'gitee.event_name == "push" && gitee.ref == "refs/heads/main"'
+        steps:
+          - name: 检出代码
+            plugin: checkout
+            inputs:
+              fetch-depth: 1
+
+          - name: 构建 Docker 镜像
+            plugin: docker-build
+            inputs:
+              dockerfile: backend-py/Dockerfile
+              context: backend-py
+              tags: |
+                fullstack-news/backend:latest
+                fullstack-news/backend:${{ gitee.sha }}
+              # 如果需要推送到 Docker Hub，取消下面的注释
+              # push: true
+              # registry: docker.io
+              # username: ${{ env.DOCKER_USERNAME }}
+              # password: ${{ env.DOCKER_PASSWORD }}
+
+  # ========================================================
+  # Stage 4：部署到 Railway
+  # ========================================================
+  # Railway 可以直接从 Gitee 仓库构建，不需要手动推送镜像
+  deploy:
+    name: 部署
+    jobs:
+      railway-deploy:
+        name: Railway Deploy
+        runs-on: linux-x86_1
+        needs: docker-build
+        # 只在 push 到主分支时部署
+        if: 'gitee.event_name == "push" && gitee.ref == "refs/heads/main"'
+        steps:
+          - name: 安装 Railway CLI
+            script:
+              - npm install -g @railway/cli
+
+          - name: 触发 Railway 部署
+            script:
+              - railway up --service fullstack-news-backend
+            env:
+              RAILWAY_TOKEN: ${{ env.RAILWAY_TOKEN }}
+
+          - name: 健康检查
+            script:
+              - echo "等待 Railway 部署完成..."
+              - sleep 30
+              - DOMAIN=$(railway domain --service fullstack-news-backend 2>/dev/null || echo "")
+              - if [ -n "$DOMAIN" ]; then
+              -   echo "检查健康端点: https://$DOMAIN/api/health"
+              -   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN/api/health" || echo "000")
+              -   if [ "$HTTP_CODE" = "200" ]; then
+              -     echo "✅ 部署成功！服务健康"
+              -   else
+              -     echo "⚠️ 服务返回 HTTP $HTTP_CODE，请检查 Railway 日志"
+              -     exit 1
+              -   fi
+              - else
+              -   echo "⚠️ 无法获取 Railway 域名，跳过健康检查"
+              - fi
+            env:
+              RAILWAY_TOKEN: ${{ env.RAILWAY_TOKEN }}
+
+# ============================================================
+# 📋 配置说明
+# ============================================================
+#
+# 1. 启用 Gitee Go：
+#    仓库页面 → 设置 → 流水线 → 启用 Gitee Go
+#
+# 2. 配置环境变量：
+#    仓库页面 → 设置 → 环境变量 → 添加环境变量
+#    - RAILWAY_TOKEN: 从 Railway Dashboard → Settings → Tokens 获取
+#
+# 3. 连接 Railway 到 Gitee：
+#    Railway Dashboard → New Project → Deploy from GitHub/Gitee
+#    选择你的 Gitee 仓库，Railway 会自动检测 Dockerfile
+#
+# 4. Railway 环境变量（在 Railway Dashboard 配置）：
+#    - DATABASE_URL: MySQL 连接字符串
+#    - REDIS_URL: Redis 连接字符串
+#    - JWT_SECRET_KEY: JWT 签名密钥（至少 32 字符）
+#    - SECRET_KEY: 应用密钥
+#    - ENVIRONMENT: production
+#
+# ============================================================

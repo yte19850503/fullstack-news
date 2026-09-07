@@ -1,0 +1,92 @@
+# docker-compose.yml — 一键启动整个后端环境
+# 用法：docker-compose up -d --build
+# 停止：docker-compose down
+# 查看日志：docker-compose logs -f app
+
+services:
+  # ---- MySQL 数据库 ----
+  mysql:
+    image: mysql:8
+    container_name: news-mysql-docker
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_USER: news
+      MYSQL_PASSWORD: news123
+      MYSQL_DATABASE: news_db
+    ports:
+      - "3306:3306"
+    volumes:
+      # 数据持久化：容器删除后数据不丢失
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # Docker 每 5 秒检查一次 MySQL 是否就绪
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---- Redis 缓存 ----
+  redis:
+    image: redis:7
+    container_name: news-redis-docker
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ---- FastAPI 应用 ----
+  app:
+    build: .
+    container_name: news-app
+    restart: unless-stopped
+    # 不再直接暴露端口，所有请求通过 Nginx 转发
+    expose:
+      - "8000"
+    environment:
+      # Docker 网络内部用服务名作为主机名（mysql/redis，不是 localhost）
+      DATABASE_URL: mysql+pymysql://news:news123@mysql:3306/news_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-dev-secret-change-in-production
+      JWT_EXPIRES_IN: 7d
+    volumes:
+      # 上传文件持久化：容器重建后上传的图片还在
+      - uploads_data:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ---- Nginx 反向代理 ----
+  nginx:
+    image: nginx:alpine
+    container_name: news-nginx
+    restart: unless-stopped
+    ports:
+      # Windows 下 80/443 端口常被系统占用，用 8080/8443 代替
+      # 宿主机 8080 → 容器 80（HTTP，自动跳转 HTTPS）
+      # 宿主机 8443 → 容器 443（HTTPS）
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      # Nginx 配置文件
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL 证书
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # 共享 uploads 卷，Nginx 直接服务静态文件（不经过 Python）
+      - uploads_data:/app/uploads:ro
+    depends_on:
+      - app
+
+# 数据卷：Docker 管理的持久化存储
+volumes:
+  mysql_data:
+  redis_data:
+  uploads_data:
