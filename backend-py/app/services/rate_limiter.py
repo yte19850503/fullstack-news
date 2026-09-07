@@ -13,7 +13,7 @@ def rate_limiter(request: Request) -> None:
         current = redis_client.incr(key)
         if current == 1:
             redis_client.expire(key, 60)
-    except redis.ConnectionError:
+    except Exception:
         return
 
     if current > 60:
